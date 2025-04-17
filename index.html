@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Live ASCII Webcam</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background: #121212;
+      color: #e0e0e0;
+      font-family: monospace;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      background: #1e1e1e;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .controls h1 { font-size: 1.2rem; flex: 1; }
+    .controls label {
+      display: flex;
+      align-items: center;
+      gap: .3rem;
+      user-select: none;
+    }
+    .controls input[type="range"] {
+      width: 120px;
+      -webkit-appearance: none;
+      background: #444;
+      height: 4px;
+      border-radius: 2px;
+      outline: none;
+    }
+    .controls input[type="range"]::-webkit-slider-thumb,
+    .controls input[type="range"]::-moz-range-thumb {
+      width: 12px; height: 12px;
+      background: #888;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 2px #000;
+    }
+    .controls .value, .controls #fpsDisplay { width: 4ch; text-align: right; }
+    .controls button {
+      background: #2e2e2e;
+      border: 1px solid #444;
+      padding: 4px 8px;
+      color: #e0e0e0;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .controls button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .controls button:hover:not(:disabled) { background: #3e3e3e; }
+    .ascii {
+      position: relative;
+      flex: 1;
+      background: #000;
+      color: #fff;
+      padding: 10px;
+      overflow: auto;
+      white-space: pre;
+      line-height: 1em;
+      font-size: 8px;
+    }
+    .ascii.off {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      white-space: normal;
+      font-size: 1.5rem;
+      color: #ffffff;
+    }
+    #canvas, #exportCanvas { display: none; }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <h1>Live ASCII Webcam</h1>
+
+    <label>
+      Width:
+      <input type="range" id="widthControl" min="80" max="800" step="1">
+    </label>
+    <span class="value" id="widthValue">—</span>
+
+    <label>
+      Contrast:
+      <input type="range" id="contrastControl" min="0.5" max="2.0" step="0.01" value="1.0">
+    </label>
+    <span class="value" id="contrastValue">1.00</span>
+
+    <label>
+      <input type="checkbox" id="colorToggle">
+      Color
+    </label>
+
+    <button id="snapshotBtn">Save PNG</button>
+    <button id="recordBtn">Start Recording</button>
+    <button id="cameraToggleBtn">Turn Camera On</button>
+    <button id="resetBtn">Reset Config</button>
+    <span id="fpsDisplay">-- FPS</span>
+  </div>
+
+  <pre class="ascii off" id="ascii">Camera is off</pre>
+  <canvas id="canvas"></canvas>
+  <canvas id="exportCanvas"></canvas>
+
+  <script>
+  (async () => {
+    const video = document.createElement('video');
+    video.autoplay = true;
+    video.playsInline = true;
+
+    const canvas         = document.getElementById('canvas');
+    const ctx            = canvas.getContext('2d');
+    const exportCanvas   = document.getElementById('exportCanvas');
+    const ectx           = exportCanvas.getContext('2d');
+    const asciiEl        = document.getElementById('ascii');
+    const widthSlider    = document.getElementById('widthControl');
+    const widthLabel     = document.getElementById('widthValue');
+    const contrastSlider = document.getElementById('contrastControl');
+    const contrastLabel  = document.getElementById('contrastValue');
+    const colorToggle    = document.getElementById('colorToggle');
+    const snapshotBtn    = document.getElementById('snapshotBtn');
+    const recordBtn      = document.getElementById('recordBtn');
+    const cameraToggleBtn= document.getElementById('cameraToggleBtn');
+    const resetBtn       = document.getElementById('resetBtn');
+    const fpsDisplay     = document.getElementById('fpsDisplay');
+
+    const asciiChars = ['@','#','*','=',':','.',' '];
+    const charAspect = 0.5;
+    const fontSize   = 8;
+    ectx.font = `${fontSize}px monospace`;
+    const charWidth = ectx.measureText('M').width;
+    const charHeight = fontSize;
+
+    // default config
+    const initialWidth    = 150;
+    const initialContrast = 1.0;
+    const initialColor    = false;
+    let configBeforeOff = { width: initialWidth, contrast: initialContrast, color: initialColor };
+
+    // FPS tracking
+    let lastTime = performance.now();
+    let frameCount = 0;
+
+    function updateFPS() {
+      const now = performance.now();
+      frameCount++;
+      const delta = now - lastTime;
+      if (delta >= 1000) {
+        const fps = (frameCount * 1000 / delta).toFixed(1);
+        fpsDisplay.textContent = fps + ' FPS';
+        frameCount = 0;
+        lastTime = now;
+      }
+    }
+
+    // enable/disable controls except record
+    function setAllControls(enabled) {
+      widthSlider.disabled    = !enabled;
+      contrastSlider.disabled = !enabled;
+      colorToggle.disabled    = !enabled;
+      snapshotBtn.disabled    = !enabled;
+      resetBtn.disabled       = !enabled;
+      // record button always enabled
+      // camera toggle stays enabled unless recording
+      cameraToggleBtn.disabled = recorder && recorder.state === 'recording';
+    }
+
+    // camera
+    let stream;
+    async function startCamera() {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+      widthSlider.value    = configBeforeOff.width;
+      contrastSlider.value = configBeforeOff.contrast;
+      colorToggle.checked  = configBeforeOff.color;
+      widthLabel.textContent    = configBeforeOff.width;
+      contrastLabel.textContent = configBeforeOff.contrast.toFixed(2);
+      asciiEl.classList.remove('off');
+      cameraToggleBtn.textContent = 'Turn Camera Off';
+      setAllControls(true);
+    }
+    function stopCamera() {
+      configBeforeOff = {
+        width: parseInt(widthSlider.value, 10),
+        contrast: parseFloat(contrastSlider.value),
+        color: colorToggle.checked
+      };
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      asciiEl.textContent = 'Camera is off';
+      asciiEl.classList.add('off');
+      cameraToggleBtn.textContent = 'Turn Camera On';
+      setAllControls(false);
+    }
+
+    // recording
+    let recorder, chunks = [];
+    recordBtn.addEventListener('click', () => {
+      if (recorder && recorder.state === 'recording') {
+        recorder.stop();
+        recordBtn.textContent = 'Start Recording';
+        setAllControls(true);
+      } else {
+        const recStream = exportCanvas.captureStream(30);
+        chunks = [];
+        try { recorder = new MediaRecorder(recStream, { mimeType: 'video/mp4' }); }
+        catch { recorder = new MediaRecorder(recStream, { mimeType: 'video/webm' }); }
+        recorder.ondataavailable = e => e.data.size && chunks.push(e.data);
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: recorder.mimeType });
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = `ascii-${Date.now()}.${ recorder.mimeType.includes('webm') ? 'webm' : 'mp4' }`;
+          link.click();
+        };
+        recorder.start();
+        recordBtn.textContent = 'Stop Recording';
+        setAllControls(false);
+      }
+    });
+
+    // controls events
+    widthSlider.addEventListener('input', () => widthLabel.textContent = widthSlider.value);
+    contrastSlider.addEventListener('input', () => contrastLabel.textContent = parseFloat(contrastSlider.value).toFixed(2));
+    snapshotBtn.addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.href = exportCanvas.toDataURL('image/png');
+      link.download = `ascii-${Date.now()}.png`;
+      link.click();
+    });
+
+    cameraToggleBtn.addEventListener('click', () => {
+      if (stream && stream.getTracks().some(t => t.readyState === 'live')) stopCamera();
+      else startCamera();
+    });
+    resetBtn.addEventListener('click', () => {
+      widthSlider.value    = initialWidth;
+      contrastSlider.value = initialContrast;
+      colorToggle.checked  = initialColor;
+      widthLabel.textContent    = initialWidth;
+      contrastLabel.textContent = initialContrast.toFixed(2);
+    });
+
+    video.addEventListener('loadedmetadata', () => {
+      const vw = video.videoWidth;
+      widthSlider.min   = 80;
+      widthSlider.max   = vw;
+      widthSlider.value = initialWidth;
+      widthLabel.textContent    = initialWidth;
+      contrastLabel.textContent = initialContrast.toFixed(2);
+      setAllControls(true);
+      requestAnimationFrame(renderAscii);
+    });
+
+    function renderAscii() {
+      if (asciiEl.classList.contains('off')) { updateFPS(); return requestAnimationFrame(renderAscii); }
+      const vw = video.videoWidth, vh = video.videoHeight;
+      if (!vw || !vh) { updateFPS(); return requestAnimationFrame(renderAscii); }
+      const baseW    = parseInt(widthSlider.value, 10);
+      const contrast = parseFloat(contrastSlider.value);
+      const outW     = baseW;
+      const outH     = Math.floor((vh / vw) * outW * charAspect);
+      canvas.width  = outW;
+      canvas.height = outH;
+      exportCanvas.width  = Math.ceil(outW * charWidth);
+      exportCanvas.height = Math.ceil(outH * charHeight);
+      ctx.save(); ctx.scale(-1, 1); ctx.drawImage(video, -outW, 0, outW, outH); ctx.restore();
+      const img = ctx.getImageData(0, 0, outW, outH).data;
+      ectx.fillStyle = '#000'; ectx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+      ectx.font = `${fontSize}px monospace`;
+      ectx.textBaseline = 'top';
+      if (colorToggle.checked) {
+        let html = '';
+        for (let y = 0; y < outH; y++) {
+          for (let x = 0; x < outW; x++) {
+            const i = (y * outW + x) * 4;
+            const [r,g,b] = [img[i],img[i+1],img[i+2]];
+            let L = (0.299*r + 0.587*g + 0.114*b)/255;
+            L = ((L - 0.5)*contrast+0.5)*255; L = Math.max(0,Math.min(255,L));
+            const idx = Math.floor((L/255)*(asciiChars.length-1));
+            const ch  = asciiChars[asciiChars.length-1-idx];
+            html += `<span style="color:rgb(${r},${g},${b})">${ch}</span>`;
+            ectx.fillStyle = `rgb(${r},${g},${b})`;
+            ectx.fillText(ch, x*charWidth, y*charHeight);
+          }
+          html += '<br>';
+        }
+        asciiEl.innerHTML = html;
+      } else {
+        let txt = '';
+        for (let y = 0; y < outH; y++) {
+          for (let x = 0; x < outW; x++) {
+            const i = (y * outW + x) * 4;
+            let L = (0.299*img[i] + 0.587*img[i+1] + 0.114*img[i+2]) / 255;
+            L = ((L - 0.5)*contrast+0.5)*255; L = Math.max(0,Math.min(255,L));
+            const idx = Math.floor((L/255)*(asciiChars.length-1));
+            const ch  = asciiChars[asciiChars.length-1-idx];
+            txt += ch;
+            ectx.fillStyle = '#fff'; ectx.fillText(ch, x*charWidth, y*charHeight);
+          }
+          txt += '\n';
+        }
+        asciiEl.textContent = txt;
+      }
+      updateFPS();
+      requestAnimationFrame(renderAscii);
+    }
+  })();
+  </script>
+</body>
+</html>
