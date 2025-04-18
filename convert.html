@@ -176,6 +176,15 @@
 
   // --- Full‑length video export handler ---
   saveBtn.addEventListener('click', () => {
+    if (fileType === 'image') {
+      exportCanvas.toBlob(blob => {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `ascii-${Date.now()}.png`;
+        link.click();
+      });
+      return;
+    }
     if (fileType !== 'video') return;
 
     const candidates = [
@@ -242,6 +251,7 @@
       image.onload = ()=>{
         widthSlider.max = image.naturalWidth;
         displayImage();
+        saveBtn.disabled = false;
       };
       image.src = URL.createObjectURL(file);
       [widthSlider, contrastSlider, colorToggle].forEach(c=>c.disabled=false);
