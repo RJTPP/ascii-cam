@@ -43,6 +43,11 @@ _No installation or server is required — the app runs entirely in-browser._
 - **Recording Format**: Browsers may fallback to WebM if MP4 is not supported.
 - **Permission Denied**: If the camera doesn’t start, check browser privacy settings to allow camera access.
 
+
+## Related Projects
+
+If you’re looking for ASCII image converters, feel free to check out the companion project: [RJTPP/ascii-pic](https://github.com/rjtpp/ascii-pic)
+
 ## License
 
 This project is released under the [MIT License](LICENSE).
