@@ -127,12 +127,14 @@
       <input type="checkbox" id="colorToggle">
       Color
     </label>
+    <label>
+      <input type="checkbox" id="invertToggle">
+      Invert
+    </label>
     <label for="charSetSelect">Chars:</label>
     <select id="charSetSelect">
       <option value="simple">Simple</option>
       <option value="standard">Standard</option>
-      <option value="simpleInvert">Simple (Invert)</option>
-      <option value="standardInvert">Standard (Invert)</option>
       <option value="pixel">Pixel</option>
       <option value="ternary">Ternary</option>
       <option value="blackAndWhite">Black and White</option>
@@ -181,14 +183,14 @@
     const fpsDisplay     = document.getElementById('fpsDisplay');
     const previewToggleBtn = document.getElementById('previewToggleBtn');
     let previewEnabled = true;
+    const invertToggle = document.getElementById('invertToggle');
+    let invertEnabled = invertToggle.checked;
 
     let screenStream = null;
 
     const asciiSets = {
       simple: ['@','%','#','*','+','=','-',';',':',',','.',' '],
-      simpleInvert: ['@','%','#','*','+','=','-',';',':',',','.',' '].reverse(),
       standard: Array.from(" .-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@").reverse(),
-      standardInvert: Array.from(" .-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@"),
       pixel: ['█','▓','▒','░'],
       ternary: ['.','.',',', ',',' '],
       blackAndWhite: ['.','.','.',' ']
@@ -308,6 +310,9 @@
         previewToggleBtn.textContent = 'Show Preview';
       }
     });
+    invertToggle.addEventListener('change', () => {
+      invertEnabled = invertToggle.checked;
+    });
 
     const sourceSelect = document.getElementById('sourceSelect');
     const charSetSelect = document.getElementById('charSetSelect');
@@ -412,7 +417,8 @@
             let L = (0.299*r + 0.587*g + 0.114*b)/255;
             L = ((L - 0.5)*contrast+0.5)*255; L = Math.max(0,Math.min(255,L));
             const idx = Math.floor((L/255)*(asciiChars.length-1));
-            const ch  = asciiChars[asciiChars.length-1-idx];
+            const mapIndex = invertEnabled ? idx : asciiChars.length - 1 - idx;
+            const ch = asciiChars[mapIndex];
             html += `<span style="color:rgb(${r},${g},${b})">${ch}</span>`;
             ectx.fillStyle = `rgb(${r},${g},${b})`;
             ectx.fillText(ch, x*charWidth, y*charHeight);
@@ -428,7 +434,8 @@
             let L = (0.299*img[i] + 0.587*img[i+1] + 0.114*img[i+2]) / 255;
             L = ((L - 0.5)*contrast+0.5)*255; L = Math.max(0,Math.min(255,L));
             const idx = Math.floor((L/255)*(asciiChars.length-1));
-            const ch  = asciiChars[asciiChars.length-1-idx];
+            const mapIndex = invertEnabled ? idx : asciiChars.length - 1 - idx;
+            const ch = asciiChars[mapIndex];
             txt += ch;
             ectx.fillStyle = '#fff'; ectx.fillText(ch, x*charWidth, y*charHeight);
           }
