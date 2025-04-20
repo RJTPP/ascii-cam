@@ -48,7 +48,6 @@ No installation or server is required — everything runs locally in-browser.
 
 - **Recording Compatibility**: Most browsers support MP4 or WebM recording. Safari prefers MP4.
 - **Performance**: Lower width and disabling color improves speed on slower machines.
-- **Screen Sharing**: Screen recording auto-reverts to webcam if screen sharing is stopped.
 - **Permissions**: Check your browser permissions if webcam/screen capture fails to start.
 
 ## Related Projects
