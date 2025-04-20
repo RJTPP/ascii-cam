@@ -197,8 +197,8 @@
 
     <label for="charSetSelect">Chars:</label>
     <select id="charSetSelect">
-      <option value="simple">Simple</option>
-      <option value="standard" selected>Standard</option>
+      <option value="simple" selected>Simple</option>
+      <option value="standard">Standard</option>
       <option value="pixel">Pixel</option>
       <option value="ternary">Ternary</option>
       <option value="blackAndWhite">B & W</option> <!-- Shorter label -->
@@ -274,7 +274,7 @@
         ternary: ['.', '.', ',', ',', ' '], // Dense sets might need tuning
         blackAndWhite: ['#', '#', '.', ' ', ' '] // Example
       };
-      let asciiChars = asciiSets.standard; // Default to standard
+      let asciiChars = asciiSets.simple; // Default to standard
       const charAspect = 0.5; // Assumed aspect ratio of monospace char (width/height)
       const baseFontSize = 8; // Base font size for export canvas calculations
       ectx.font = `${baseFontSize}px monospace`;
@@ -284,7 +284,7 @@
       const initialWidth = 150;
       const initialContrast = 1.0;
       const initialColor = false;
-      const initialCharSet = 'standard';
+      const initialCharSet = 'simple';
       const initialInvert = false;
       let configBeforeOff = { width: initialWidth, contrast: initialContrast, color: initialColor };
 
