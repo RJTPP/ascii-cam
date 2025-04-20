@@ -14,13 +14,28 @@
       font-family: monospace;
     }
     .controls {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       align-items: center;
       padding: 10px;
       background: #1e1e1e;
-      gap: 1rem;
-      flex-wrap: wrap;
+      gap: 0.5rem;
     }
+    .controls h1 {
+      grid-column: span 2;
+      margin-bottom: 0.5rem;
+    }
+
+    .controls label,
+    .controls button {
+      min-width: 120px;
+    }
+
+    .controls .value,
+    .controls #fpsDisplay {
+      justify-self: end;
+    }
+
     .controls h1 { font-size: 1.2rem; flex: 1; }
     .controls label {
       display: flex;
@@ -58,6 +73,14 @@
       cursor: not-allowed;
     }
     .controls button:hover:not(:disabled) { background: #3e3e3e; }
+    .controls select {
+      background: #2e2e2e;
+      border: 1px solid #444;
+      color: #e0e0e0;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
     .ascii {
       position: relative;
       flex: 1;
@@ -100,11 +123,14 @@
       <input type="checkbox" id="colorToggle">
       Color
     </label>
+    <label for="sourceSelect">Source:</label>
+    <select id="sourceSelect">
+      <option value="camera">Camera</option>
+      <option value="screen">Screen</option>
+    </select>
 
     <button id="snapshotBtn">Save PNG</button>
     <button id="recordBtn">Start Recording</button>
-    <button id="cameraToggleBtn">Turn Camera On</button>
-    <button id="screenToggleBtn">Capture Screen</button>
     <button id="resetBtn">Reset Config</button>
     <span id="fpsDisplay">-- FPS</span>
   </div>
@@ -131,8 +157,6 @@
     const colorToggle    = document.getElementById('colorToggle');
     const snapshotBtn    = document.getElementById('snapshotBtn');
     const recordBtn      = document.getElementById('recordBtn');
-    const cameraToggleBtn= document.getElementById('cameraToggleBtn');
-    const screenToggleBtn = document.getElementById('screenToggleBtn');
     const resetBtn       = document.getElementById('resetBtn');
     const fpsDisplay     = document.getElementById('fpsDisplay');
 
@@ -176,7 +200,6 @@
       resetBtn.disabled       = !enabled;
       // record button always enabled
       // camera toggle stays enabled unless recording
-      cameraToggleBtn.disabled = recorder && recorder.state === 'recording';
     }
 
     // camera
@@ -190,7 +213,6 @@
       widthLabel.textContent    = configBeforeOff.width;
       contrastLabel.textContent = configBeforeOff.contrast.toFixed(2);
       asciiEl.classList.remove('off');
-      cameraToggleBtn.textContent = 'Turn Camera Off';
       setAllControls(true);
     }
     function stopCamera() {
@@ -202,7 +224,6 @@
       if (stream) stream.getTracks().forEach(t => t.stop());
       asciiEl.textContent = 'Camera is off';
       asciiEl.classList.add('off');
-      cameraToggleBtn.textContent = 'Turn Camera On';
       setAllControls(false);
     }
 
@@ -242,26 +263,27 @@
       link.click();
     });
 
-    cameraToggleBtn.addEventListener('click', () => {
-      if (stream && stream.getTracks().some(t => t.readyState === 'live')) stopCamera();
-      else startCamera();
-    });
-
-    screenToggleBtn.addEventListener('click', async () => {
-      if (screenStream) {
-        // Stop screen capture
-        screenStream.getTracks().forEach(t => t.stop());
-        screenStream = null;
-        screenToggleBtn.textContent = 'Capture Screen';
-        stopCamera(); // revert to "camera off" state
+    const sourceSelect = document.getElementById('sourceSelect');
+    startCamera();
+    sourceSelect.addEventListener('change', async (e) => {
+      if (e.target.value === 'camera') {
+        // stop screen if active
+        if (screenStream) {
+          screenStream.getTracks().forEach(t => t.stop());
+          screenStream = null;
+        }
+        stopCamera(); // ensure clean state
+        await startCamera();
       } else {
-        // Start screen capture
+        // stop camera if active
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        asciiEl.textContent = '';
+        asciiEl.classList.remove('off');
+        // start screen capture
         try {
           screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
           video.srcObject = screenStream;
-          asciiEl.classList.remove('off');
-          screenToggleBtn.textContent = 'Stop Screen';
-          setAllControls(true);
+          requestAnimationFrame(renderAscii);
         } catch (err) {
           console.error('Screen capture failed:', err);
         }
