@@ -104,6 +104,7 @@
     <button id="snapshotBtn">Save PNG</button>
     <button id="recordBtn">Start Recording</button>
     <button id="cameraToggleBtn">Turn Camera On</button>
+    <button id="screenToggleBtn">Capture Screen</button>
     <button id="resetBtn">Reset Config</button>
     <span id="fpsDisplay">-- FPS</span>
   </div>
@@ -131,8 +132,11 @@
     const snapshotBtn    = document.getElementById('snapshotBtn');
     const recordBtn      = document.getElementById('recordBtn');
     const cameraToggleBtn= document.getElementById('cameraToggleBtn');
+    const screenToggleBtn = document.getElementById('screenToggleBtn');
     const resetBtn       = document.getElementById('resetBtn');
     const fpsDisplay     = document.getElementById('fpsDisplay');
+
+    let screenStream = null;
 
     const asciiChars = ['@','#','*','=',':','.',' '];
     const charAspect = 0.5;
@@ -242,6 +246,28 @@
       if (stream && stream.getTracks().some(t => t.readyState === 'live')) stopCamera();
       else startCamera();
     });
+
+    screenToggleBtn.addEventListener('click', async () => {
+      if (screenStream) {
+        // Stop screen capture
+        screenStream.getTracks().forEach(t => t.stop());
+        screenStream = null;
+        screenToggleBtn.textContent = 'Capture Screen';
+        stopCamera(); // revert to "camera off" state
+      } else {
+        // Start screen capture
+        try {
+          screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+          video.srcObject = screenStream;
+          asciiEl.classList.remove('off');
+          screenToggleBtn.textContent = 'Stop Screen';
+          setAllControls(true);
+        } catch (err) {
+          console.error('Screen capture failed:', err);
+        }
+      }
+    });
+
     resetBtn.addEventListener('click', () => {
       widthSlider.value    = initialWidth;
       contrastSlider.value = initialContrast;
