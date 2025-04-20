@@ -136,7 +136,12 @@
       <option value="pixel">Pixel</option>
       <option value="ternary">Ternary</option>
       <option value="blackAndWhite">Black and White</option>
+      <option value="custom">Custom</option>
     </select>
+    <label id="customCharLabel" class="hidden">
+      Custom Chars:
+      <input type="text" id="customCharInput" placeholder="e.g. .-+@">
+    </label>
     <label for="sourceSelect">Source:</label>
     <select id="sourceSelect">
       <option value="camera">Camera</option>
@@ -306,9 +311,25 @@
 
     const sourceSelect = document.getElementById('sourceSelect');
     const charSetSelect = document.getElementById('charSetSelect');
+    const customCharLabel = document.getElementById('customCharLabel');
+    const customCharInput = document.getElementById('customCharInput');
+
     charSetSelect.addEventListener('change', () => {
-      asciiChars = asciiSets[charSetSelect.value];
+      if (charSetSelect.value === 'custom') {
+        customCharLabel.classList.remove('hidden');
+        asciiChars = Array.from(customCharInput.value || '');
+      } else {
+        customCharLabel.classList.add('hidden');
+        asciiChars = asciiSets[charSetSelect.value];
+      }
     });
+
+    customCharInput.addEventListener('input', () => {
+      if (charSetSelect.value === 'custom') {
+        asciiChars = Array.from(customCharInput.value);
+      }
+    });
+
     startCamera();
     sourceSelect.addEventListener('change', async (e) => {
       if (e.target.value === 'camera') {
