@@ -342,7 +342,14 @@
       canvas.height = outH;
       exportCanvas.width  = Math.ceil(outW * charWidth);
       exportCanvas.height = Math.ceil(outH * charHeight);
-      ctx.save(); ctx.scale(-1, 1); ctx.drawImage(video, -outW, 0, outW, outH); ctx.restore();
+      if (sourceSelect.value === 'camera') {
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, -outW, 0, outW, outH);
+        ctx.restore();
+      } else {
+        ctx.drawImage(video, 0, 0, outW, outH);
+      }
       const img = ctx.getImageData(0, 0, outW, outH).data;
       ectx.fillStyle = '#000'; ectx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
       ectx.font = `${fontSize}px monospace`;
