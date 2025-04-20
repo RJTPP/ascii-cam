@@ -1,107 +1,161 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Live ASCII Webcam</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #121212;
+      --fg: #e0e0e0;
+      --fg-muted: #aaa;
+      --ctrl-bg: #1e1e1e;
+      --border: #333;
+      --border-light: #444;
+      --btn-bg: #2e2e2e;
+      --btn-hover: #3e3e3e;
+      --font: monospace;
+      --gap-row: 0.5rem;
+      --gap-col: 1rem;
+    }
+  
+    /* Reset & base */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
     body {
       display: flex;
       flex-direction: column;
       height: 100vh;
-      background: #121212;
-      color: #e0e0e0;
-      font-family: monospace;
-      overflow: hidden; /* Prevent body scrollbars */
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font);
+      overflow: hidden;
     }
+  
+    /* Controls container */
     .controls {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      grid-template-columns: 
+        /* width */  auto 1fr auto 
+        /* contrast */ auto 1fr auto;
+      gap: var(--gap-row) var(--gap-col);
+      padding: 1rem;
+      background: var(--ctrl-bg);
+      border-bottom: 1px solid var(--border);
       align-items: center;
-      padding: 10px;
-      background: #1e1e1e;
-      gap: 0.5rem;
-      flex-shrink: 0; /* Prevent controls from shrinking */
     }
-    .controls h1 {
-      grid-column: span 2; /* Adjust span as needed */
-      margin-bottom: 0.5rem;
-      font-size: 1.2rem;
+  
+    /* Title spans all columns */
+    .controls .title {
+      grid-column: 1 / -1;
+      font-size: 1.25rem;
+      color: #fff;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-light);
     }
-    .controls label,
-    .controls button,
-    .controls select {
-      min-width: 120px; /* Ensure consistent min width */
-    }
-    .controls .value,
-    .controls #fpsDisplay {
-      justify-self: end; /* Align values to the right */
-      width: 4ch;
-      text-align: right;
-    }
+  
+    /* Labels */
     .controls label {
+      font-size: 0.9em;
+      color: var(--fg-muted);
+    }
+    .controls label.checkbox {
       display: flex;
       align-items: center;
-      gap: .3rem;
-      user-select: none;
+      gap: 0.25em;
+      justify-self: start;
+      white-space: nowrap;
     }
+    .controls input[type="checkbox"] {
+      margin: 0;
+    }
+  
+    /* Range sliders */
     .controls input[type="range"] {
-      flex-grow: 1; /* Allow range slider to take space */
-      min-width: 80px; /* Min width for range */
-      max-width: 150px; /* Max width for range */
+      width: 100%;
       -webkit-appearance: none;
-      background: #444;
       height: 4px;
+      background: var(--border-light);
       border-radius: 2px;
       outline: none;
-      vertical-align: middle; /* Align better with label text */
     }
-    .controls input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 12px; height: 12px;
-      background: #888;
-      border-radius: 50%;
-      cursor: pointer;
-      box-shadow: 0 0 2px #000;
-    }
+    .controls input[type="range"]::-webkit-slider-thumb,
     .controls input[type="range"]::-moz-range-thumb {
-      width: 12px; height: 12px;
-      background: #888;
+      width: 12px;
+      height: 12px;
+      background: var(--fg-muted);
       border-radius: 50%;
       cursor: pointer;
       box-shadow: 0 0 2px #000;
-      border: none; /* Needed for Firefox */
+      border: none;
     }
+  
+    /* Slider value */
+    .controls .value {
+      font-weight: bold;
+      color: var(--fg);
+      width: 4ch;
+      text-align: left;
+    }
+  
+    /* Buttons & selects & custom input */
     .controls button,
-    .controls select {
-      background: #2e2e2e;
-      border: 1px solid #444;
-      padding: 4px 8px;
-      color: #e0e0e0;
-      cursor: pointer;
+    .controls select,
+    .controls .custom-char-input {
+      background: var(--btn-bg);
+      border: 1px solid var(--border-light);
+      color: var(--fg);
+      padding: 0.5rem;
       border-radius: 4px;
+      font-size: 0.9em;
+      cursor: pointer;
+    }
+    .controls button {
+      min-width: 80px;
+      white-space: nowrap;
+    }
+    .controls button:hover:not(:disabled) {
+      background: var(--btn-hover);
     }
     .controls button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
-    .controls button:hover:not(:disabled) { background: #3e3e3e; }
+    .controls select {
+      width: 100%;
+    }
+    .controls .custom-char-input {
+      width: 100%;
+    }
+  
+    /* Hideable elements */
     .hidden {
       display: none !important;
     }
+  
+    /* FPS display */
+    .controls .fps-display {
+      font-size: 0.9em;
+      color: var(--fg-muted);
+      justify-self: end;
+      white-space: nowrap;
+    }
+  
+    /* ASCII output */
     .ascii {
-      position: relative;
+      flex: 1;
       background: #000;
       color: #fff;
       padding: 10px;
-      overflow: auto; /* Use auto for scrollbars only when needed */
+      overflow: auto;
       white-space: pre;
       line-height: 1em;
-      flex-grow: 1; /* Allow preview to fill remaining space */
-      /* Removed fixed height calc */
-      box-sizing: border-box;
-      font-size: 8px; /* Start with a base font size */
+      font-size: 8px;
     }
     .ascii.off {
       display: flex;
@@ -109,139 +163,147 @@
       align-items: center;
       white-space: normal;
       font-size: 1.5rem;
-      color: #ffffff;
     }
-    #canvas, #exportCanvas { display: none; }
+  
+    /* Hide canvases */
+    #canvas,
+    #exportCanvas {
+      display: none;
+    }
   </style>
 </head>
+
 <body>
   <div class="controls">
-    <h1>Live ASCII Webcam</h1>
+    <!-- Row 1: Title -->
+    <h1 class="title">Live ASCII Webcam</h1>
 
-    <label>
-      Width:
-      <input type="range" id="widthControl" min="80" max="800" step="1">
-    </label>
+    <!-- Row 2: Sliders -->
+    <label for="widthControl">Width:</label>
+    <input type="range" id="widthControl" min="80" max="800" step="1">
     <span class="value" id="widthValue">—</span>
 
-    <label>
-      Contrast:
-      <input type="range" id="contrastControl" min="0.5" max="2.0" step="0.01" value="1.0">
-    </label>
+    <label for="contrastControl">Contrast:</label>
+    <input type="range" id="contrastControl" min="0.5" max="2.0" step="0.01" value="1.0">
     <span class="value" id="contrastValue">1.00</span>
 
-    <label>
-      <input type="checkbox" id="colorToggle">
-      Color
+    <!-- Row 3: Toggles & Selects -->
+    <label class="checkbox-label">
+      <input type="checkbox" id="colorToggle"> Color
     </label>
-    <label>
-      <input type="checkbox" id="invertToggle">
-      Invert
+    <label class="checkbox-label">
+      <input type="checkbox" id="invertToggle"> Invert Characters
     </label>
+
     <label for="charSetSelect">Chars:</label>
     <select id="charSetSelect">
       <option value="simple">Simple</option>
       <option value="standard" selected>Standard</option>
       <option value="pixel">Pixel</option>
       <option value="ternary">Ternary</option>
-      <option value="blackAndWhite">Black and White</option>
+      <option value="blackAndWhite">B & W</option> <!-- Shorter label -->
       <option value="custom">Custom</option>
     </select>
-    <label id="customCharLabel" class="hidden">
-      Custom Chars:
-      <input type="text" id="customCharInput" placeholder="e.g. .-+@">
-    </label>
+
     <label for="sourceSelect">Source:</label>
     <select id="sourceSelect">
       <option value="camera">Camera</option>
       <option value="screen">Screen</option>
     </select>
 
+    <!-- Row 4: Custom Chars (Conditional) -->
+    <label for="customCharInput" id="customCharLabel" class="hidden custom-char-label">Custom:</label>
+    <input type="text" id="customCharInput" class="hidden custom-char-input" placeholder="e.g. .-+*#%">
+
+    <!-- Row 5: Buttons & FPS -->
     <button id="snapshotBtn">Save PNG</button>
     <button id="recordBtn">Start Recording</button>
     <button id="resetBtn">Reset Config</button>
     <button id="previewToggleBtn">Hide Preview</button>
-    <span id="fpsDisplay">-- FPS</span>
+    <span id="fpsDisplay" class="fps-display">-- FPS</span>
+
   </div>
 
   <pre class="ascii off" id="ascii">Initializing...</pre>
   <canvas id="canvas"></canvas>
   <canvas id="exportCanvas"></canvas>
 
+
+
   <script>
-  (async () => {
-    const video = document.createElement('video');
-    video.autoplay = true;
-    video.playsInline = true; // Important for mobile
+    (async () => {
+      const video = document.createElement('video');
+      video.autoplay = true;
+      video.playsInline = true; // Important for mobile
 
-    const canvas         = document.getElementById('canvas');
-    const ctx            = canvas.getContext('2d', { willReadFrequently: true }); // Hint for performance
-    const exportCanvas   = document.getElementById('exportCanvas');
-    const ectx           = exportCanvas.getContext('2d');
-    const asciiEl        = document.getElementById('ascii');
-    const widthSlider    = document.getElementById('widthControl');
-    const widthLabel     = document.getElementById('widthValue');
-    const contrastSlider = document.getElementById('contrastControl');
-    const contrastLabel  = document.getElementById('contrastValue');
-    const colorToggle    = document.getElementById('colorToggle');
-    const snapshotBtn    = document.getElementById('snapshotBtn');
-    const recordBtn      = document.getElementById('recordBtn');
-    const resetBtn       = document.getElementById('resetBtn');
-    const fpsDisplay     = document.getElementById('fpsDisplay');
-    const previewToggleBtn = document.getElementById('previewToggleBtn');
-    const invertToggle   = document.getElementById('invertToggle');
-    const sourceSelect   = document.getElementById('sourceSelect');
-    const charSetSelect  = document.getElementById('charSetSelect');
-    const customCharLabel = document.getElementById('customCharLabel');
-    const customCharInput = document.getElementById('customCharInput');
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true }); // Hint for performance
+      const exportCanvas = document.getElementById('exportCanvas');
+      const ectx = exportCanvas.getContext('2d');
+      const asciiEl = document.getElementById('ascii');
+      const widthSlider = document.getElementById('widthControl');
+      const widthLabel = document.getElementById('widthValue');
+      const contrastSlider = document.getElementById('contrastControl');
+      const contrastLabel = document.getElementById('contrastValue');
+      const colorToggle = document.getElementById('colorToggle');
+      const snapshotBtn = document.getElementById('snapshotBtn');
+      const recordBtn = document.getElementById('recordBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const fpsDisplay = document.getElementById('fpsDisplay');
+      const previewToggleBtn = document.getElementById('previewToggleBtn');
+      const invertToggle = document.getElementById('invertToggle');
+      const sourceSelect = document.getElementById('sourceSelect');
+      const charSetSelect = document.getElementById('charSetSelect');
+      const customCharLabel = document.getElementById('customCharLabel');
+      const customCharInput = document.getElementById('customCharInput');
 
-    let previewEnabled = true;
-    let invertEnabled = invertToggle.checked;
-    let stream = null; // For camera
-    let screenStream = null; // For screen share
-    let recorder = null;
-    let chunks = [];
-    let renderIntervalId = null; // To store setInterval ID
-    let renderRafId = null;      // To store requestAnimationFrame ID
-    const TARGET_FPS = 30;       // Target FPS for interval-based rendering (during screen recording)
+      let previewEnabled = true;
+      let invertEnabled = invertToggle.checked;
+      let stream = null; // For camera
+      let screenStream = null; // For screen share
+      let recorder = null;
+      let chunks = [];
+      let renderIntervalId = null; // To store setInterval ID
+      let renderRafId = null;      // To store requestAnimationFrame ID
+      const TARGET_FPS = 30;       // Target FPS for interval-based rendering (during screen recording)
 
-    const asciiSets = {
-      simple: ['@','%','#','*','+','=','-',';',':',',','.',' '],
-      standard: Array.from(" .-'`:_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@").reverse(),
-      pixel: ['█','▓','▒','░', ' '],
-      ternary: ['.','.',',', ',',' '], // Dense sets might need tuning
-      blackAndWhite: ['#','#','.',' ', ' '] // Example
-    };
-    let asciiChars = asciiSets.standard; // Default to standard
-    const charAspect = 0.5; // Assumed aspect ratio of monospace char (width/height)
-    const baseFontSize = 8; // Base font size for export canvas calculations
-    ectx.font = `${baseFontSize}px monospace`;
-    const charWidth = ectx.measureText('M').width; // Measure once
-    const charHeight = baseFontSize;
+      const asciiSets = {
+        simple: ['@', '%', '#', '*', '+', '=', '-', ';', ':', ',', '.', ' '],
+        standard: Array.from(" .-'`:_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@").reverse(),
+        pixel: ['█', '▓', '▒', '░', ' '],
+        ternary: ['.', '.', ',', ',', ' '], // Dense sets might need tuning
+        blackAndWhite: ['#', '#', '.', ' ', ' '] // Example
+      };
+      let asciiChars = asciiSets.standard; // Default to standard
+      const charAspect = 0.5; // Assumed aspect ratio of monospace char (width/height)
+      const baseFontSize = 8; // Base font size for export canvas calculations
+      ectx.font = `${baseFontSize}px monospace`;
+      const charWidth = ectx.measureText('M').width; // Measure once
+      const charHeight = baseFontSize;
 
-    const initialWidth    = 150;
-    const initialContrast = 1.0;
-    const initialColor    = false;
-    const initialCharSet  = 'standard';
-    const initialInvert   = false;
-    let configBeforeOff = { width: initialWidth, contrast: initialContrast, color: initialColor };
+      const initialWidth = 150;
+      const initialContrast = 1.0;
+      const initialColor = false;
+      const initialCharSet = 'standard';
+      const initialInvert = false;
+      let configBeforeOff = { width: initialWidth, contrast: initialContrast, color: initialColor };
 
-    let lastTime = performance.now();
-    let frameCount = 0;
+      let lastTime = performance.now();
+      let frameCount = 0;
 
-    function updateFPS() {
-      const now = performance.now();
-      frameCount++;
-      const delta = now - lastTime;
-      if (delta >= 1000) {
-        const fps = (frameCount * 1000 / delta).toFixed(1);
-        fpsDisplay.textContent = fps + ' FPS';
-        frameCount = 0;
-        lastTime = now;
+      function updateFPS() {
+        const now = performance.now();
+        frameCount++;
+        const delta = now - lastTime;
+        if (delta >= 1000) {
+          const fps = (frameCount * 1000 / delta).toFixed(1);
+          fpsDisplay.textContent = fps + ' FPS';
+          frameCount = 0;
+          lastTime = now;
+        }
       }
-    }
 
-    function setAllControls(enabled) {
+      function setAllControls(enabled) {
         // Only disable controls that shouldn't be active when the stream is off OR during recording
         const isRecording = recorder && recorder.state === 'recording';
         const effectiveEnabled = enabled && !isRecording;
@@ -257,228 +319,228 @@
         sourceSelect.disabled = isRecording; // Can't change source while recording
         previewToggleBtn.disabled = isRecording; // Don't toggle preview during recording
         // Record button state is handled separately
-    }
-
-    // --- Render Loop Management ---
-    function stopRenderLoop() {
-      if (renderIntervalId) {
-        clearInterval(renderIntervalId);
-        renderIntervalId = null;
       }
-      if (renderRafId) {
-        cancelAnimationFrame(renderRafId);
-        renderRafId = null;
+
+      // --- Render Loop Management ---
+      function stopRenderLoop() {
+        if (renderIntervalId) {
+          clearInterval(renderIntervalId);
+          renderIntervalId = null;
+        }
+        if (renderRafId) {
+          cancelAnimationFrame(renderRafId);
+          renderRafId = null;
+        }
+        console.log("Render loop stopped.");
       }
-      console.log("Render loop stopped.");
-    }
 
-    function startRenderLoop() {
-      stopRenderLoop(); // Ensure only one loop runs
+      function startRenderLoop() {
+        stopRenderLoop(); // Ensure only one loop runs
 
-      // Determine if we should use setInterval (for background screen recording)
-      const isScreenRecording = recorder && recorder.state === 'recording' && sourceSelect.value === 'screen';
+        // Determine if we should use setInterval (for background screen recording)
+        const isScreenRecording = recorder && recorder.state === 'recording' && sourceSelect.value === 'screen';
 
-      if (isScreenRecording) {
-        console.log(`Starting render loop with setInterval (Target FPS: ${TARGET_FPS})`);
-        renderIntervalId = setInterval(renderAscii, 1000 / TARGET_FPS);
-      } else {
-        console.log("Starting render loop with requestAnimationFrame");
-        function rafLoop(timestamp) {
+        if (isScreenRecording) {
+          console.log(`Starting render loop with setInterval (Target FPS: ${TARGET_FPS})`);
+          renderIntervalId = setInterval(renderAscii, 1000 / TARGET_FPS);
+        } else {
+          console.log("Starting render loop with requestAnimationFrame");
+          function rafLoop(timestamp) {
             // Check if the loop should still be running before rendering
             if (renderRafId === null && !isScreenRecording) { // Check if stopped since last frame
-                 console.log("rAF loop detected stop request, exiting.");
-                 return;
+              console.log("rAF loop detected stop request, exiting.");
+              return;
             }
-             renderAscii(timestamp); // Render this frame
-             if (renderRafId !== null) { // Check again in case renderAscii took time and stop was called
-                renderRafId = requestAnimationFrame(rafLoop); // Schedule the next frame
-             }
+            renderAscii(timestamp); // Render this frame
+            if (renderRafId !== null) { // Check again in case renderAscii took time and stop was called
+              renderRafId = requestAnimationFrame(rafLoop); // Schedule the next frame
+            }
+          }
+          // Need to assign the ID *before* the first call in case stopRenderLoop is called immediately
+          renderRafId = requestAnimationFrame(rafLoop); // Start the rAF loop
         }
-        // Need to assign the ID *before* the first call in case stopRenderLoop is called immediately
-        renderRafId = requestAnimationFrame(rafLoop); // Start the rAF loop
       }
-    }
 
 
-    async function startCamera() {
-      try {
-        console.log("Requesting camera access...");
-        stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        video.srcObject = stream;
-        await video.play(); // Ensure video starts playing
-        console.log("Camera stream acquired.");
-        asciiEl.textContent = ''; // Clear "off" message
-        asciiEl.classList.remove('off');
-        // Restore previous settings or defaults
-        widthSlider.value = configBeforeOff.width;
-        contrastSlider.value = configBeforeOff.contrast;
-        colorToggle.checked = configBeforeOff.color;
-        widthLabel.textContent = configBeforeOff.width;
-        contrastLabel.textContent = configBeforeOff.contrast.toFixed(2);
-        // Don't start loop here, wait for loadedmetadata
-        return true; // Indicate success
-      } catch (err) {
+      async function startCamera() {
+        try {
+          console.log("Requesting camera access...");
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          video.srcObject = stream;
+          await video.play(); // Ensure video starts playing
+          console.log("Camera stream acquired.");
+          asciiEl.textContent = ''; // Clear "off" message
+          asciiEl.classList.remove('off');
+          // Restore previous settings or defaults
+          widthSlider.value = configBeforeOff.width;
+          contrastSlider.value = configBeforeOff.contrast;
+          colorToggle.checked = configBeforeOff.color;
+          widthLabel.textContent = configBeforeOff.width;
+          contrastLabel.textContent = configBeforeOff.contrast.toFixed(2);
+          // Don't start loop here, wait for loadedmetadata
+          return true; // Indicate success
+        } catch (err) {
           console.error('Camera access failed:', err);
           asciiEl.textContent = 'Camera access denied or failed.';
           asciiEl.classList.add('off');
           setAllControls(false); // Disable controls if camera fails
           recordBtn.disabled = true; // Disable record too
           return false; // Indicate failure
-      }
-    }
-
-    function stopCamera() {
-      console.log("Stopping camera.");
-      configBeforeOff = {
-        width: parseInt(widthSlider.value, 10) || initialWidth,
-        contrast: parseFloat(contrastSlider.value) || initialContrast,
-        color: colorToggle.checked
-      };
-      if (stream) {
-         stream.getTracks().forEach(t => t.stop());
-         stream = null;
-      }
-      video.srcObject = null; // Clear source
-      stopRenderLoop(); // Stop rendering when camera explicitly stopped
-      asciiEl.textContent = 'Camera is off';
-      asciiEl.classList.add('off');
-      setAllControls(false); // Disable most controls
-      recordBtn.disabled = true; // Cannot record without source
-      fpsDisplay.textContent = '-- FPS'; // Reset FPS
-    }
-
-    async function startScreenCapture() {
-        try {
-            console.log("Requesting screen capture...");
-            const captureStream = await navigator.mediaDevices.getDisplayMedia({
-                video: { cursor: "always" }, // Include cursor
-                audio: false // No audio needed
-            });
-
-            // Handle user stopping the share via browser UI
-            const [track] = captureStream.getVideoTracks();
-            track.addEventListener('ended', async () => {
-                console.log('Screen share stopped by user.');
-                // If recording was active, stop it
-                if (recorder && recorder.state === 'recording') {
-                    recorder.stop(); // This will trigger onstop handler
-                    recordBtn.textContent = 'Start Recording'; // Update UI preemptively
-                }
-                screenStream = null; // Clear stream variable
-                // Revert to camera if it's the selected source
-                if (sourceSelect.value === 'screen') { // Check if we should revert
-                    sourceSelect.value = 'camera';
-                    await switchSource('camera'); // Switch back cleanly
-                }
-            });
-
-            console.log("Screen stream acquired.");
-            return captureStream; // Return the stream
-        } catch (err) {
-            console.error('Screen capture failed or cancelled:', err);
-            asciiEl.textContent = 'Screen capture failed or cancelled.';
-            asciiEl.classList.add('off');
-            stopRenderLoop();
-            setAllControls(false);
-            recordBtn.disabled = true;
-            return null; // Indicate failure
         }
-    }
+      }
 
-    function stopScreenCapture() {
+      function stopCamera() {
+        console.log("Stopping camera.");
+        configBeforeOff = {
+          width: parseInt(widthSlider.value, 10) || initialWidth,
+          contrast: parseFloat(contrastSlider.value) || initialContrast,
+          color: colorToggle.checked
+        };
+        if (stream) {
+          stream.getTracks().forEach(t => t.stop());
+          stream = null;
+        }
+        video.srcObject = null; // Clear source
+        stopRenderLoop(); // Stop rendering when camera explicitly stopped
+        asciiEl.textContent = 'Camera is off';
+        asciiEl.classList.add('off');
+        setAllControls(false); // Disable most controls
+        recordBtn.disabled = true; // Cannot record without source
+        fpsDisplay.textContent = '-- FPS'; // Reset FPS
+      }
+
+      async function startScreenCapture() {
+        try {
+          console.log("Requesting screen capture...");
+          const captureStream = await navigator.mediaDevices.getDisplayMedia({
+            video: { cursor: "always" }, // Include cursor
+            audio: false // No audio needed
+          });
+
+          // Handle user stopping the share via browser UI
+          const [track] = captureStream.getVideoTracks();
+          track.addEventListener('ended', async () => {
+            console.log('Screen share stopped by user.');
+            // If recording was active, stop it
+            if (recorder && recorder.state === 'recording') {
+              recorder.stop(); // This will trigger onstop handler
+              recordBtn.textContent = 'Start Recording'; // Update UI preemptively
+            }
+            screenStream = null; // Clear stream variable
+            // Revert to camera if it's the selected source
+            if (sourceSelect.value === 'screen') { // Check if we should revert
+              sourceSelect.value = 'camera';
+              await switchSource('camera'); // Switch back cleanly
+            }
+          });
+
+          console.log("Screen stream acquired.");
+          return captureStream; // Return the stream
+        } catch (err) {
+          console.error('Screen capture failed or cancelled:', err);
+          asciiEl.textContent = 'Screen capture failed or cancelled.';
+          asciiEl.classList.add('off');
+          stopRenderLoop();
+          setAllControls(false);
+          recordBtn.disabled = true;
+          return null; // Indicate failure
+        }
+      }
+
+      function stopScreenCapture() {
         console.log("Stopping screen capture explicitly.");
-         if (screenStream) {
-             screenStream.getTracks().forEach(track => track.stop());
-             screenStream = null;
-         }
-         video.srcObject = null;
-         stopRenderLoop();
-         // Don't necessarily set the text to "off" here, as the switch might go to camera
-    }
+        if (screenStream) {
+          screenStream.getTracks().forEach(track => track.stop());
+          screenStream = null;
+        }
+        video.srcObject = null;
+        stopRenderLoop();
+        // Don't necessarily set the text to "off" here, as the switch might go to camera
+      }
 
-    // --- Event Listeners ---
+      // --- Event Listeners ---
 
-    recordBtn.addEventListener('click', () => {
-      if (!video.srcObject) {
+      recordBtn.addEventListener('click', () => {
+        if (!video.srcObject) {
           alert("No video source active.");
           return;
-      }
+        }
 
-      if (recorder && recorder.state === 'recording') {
-        console.log("Stopping recording...");
-        recorder.stop(); // onstop handler will save the file
-        // UI updates happen immediately, state managed by onstop
-        recordBtn.textContent = 'Start Recording';
-        setAllControls(true); // Re-enable controls based on current source state
-      } else {
-        console.log("Starting recording...");
-        let mimeType = 'video/webm'; // Default to webm
-        if (MediaRecorder.isTypeSupported('video/mp4')) {
+        if (recorder && recorder.state === 'recording') {
+          console.log("Stopping recording...");
+          recorder.stop(); // onstop handler will save the file
+          // UI updates happen immediately, state managed by onstop
+          recordBtn.textContent = 'Start Recording';
+          setAllControls(true); // Re-enable controls based on current source state
+        } else {
+          console.log("Starting recording...");
+          let mimeType = 'video/webm'; // Default to webm
+          if (MediaRecorder.isTypeSupported('video/mp4')) {
             mimeType = 'video/mp4';
-        } else if (!MediaRecorder.isTypeSupported('video/webm')) {
+          } else if (!MediaRecorder.isTypeSupported('video/webm')) {
             alert('No supported video recording format found (webm/mp4).');
             return;
-        }
-        console.log(`Using mimeType: ${mimeType}`);
+          }
+          console.log(`Using mimeType: ${mimeType}`);
 
-        let recStream;
-        try {
+          let recStream;
+          try {
             // Always capture from the exportCanvas for consistent output
             if (exportCanvas.captureStream) {
-                recStream = exportCanvas.captureStream(TARGET_FPS); // Match FPS if possible
+              recStream = exportCanvas.captureStream(TARGET_FPS); // Match FPS if possible
             } else if (exportCanvas.mozCaptureStream) {
-                recStream = exportCanvas.mozCaptureStream(TARGET_FPS);
+              recStream = exportCanvas.mozCaptureStream(TARGET_FPS);
             } else {
-                alert('Canvas captureStream is not supported in this browser. Cannot record.');
-                return;
+              alert('Canvas captureStream is not supported in this browser. Cannot record.');
+              return;
             }
-        } catch (err) {
+          } catch (err) {
             alert(`Error capturing canvas stream: ${err.message}`);
             return;
-        }
-
-        chunks = []; // Reset chunks
-        try {
-          recorder = new MediaRecorder(recStream, { mimeType: mimeType });
-        } catch (err) {
-          alert(`MediaRecorder initialization failed: ${err}`);
-          console.error("MediaRecorder init failed:", err);
-          recorder = null; // Ensure recorder is null on failure
-          return;
-        }
-
-        recorder.ondataavailable = e => {
-          if (e.data && e.data.size > 0) {
-            chunks.push(e.data);
-            // console.log(`Recorded chunk size: ${e.data.size}`);
           }
-        };
 
-        recorder.onstop = () => {
-          console.log("Recording stopped. Processing file.");
-          if (chunks.length === 0) {
+          chunks = []; // Reset chunks
+          try {
+            recorder = new MediaRecorder(recStream, { mimeType: mimeType });
+          } catch (err) {
+            alert(`MediaRecorder initialization failed: ${err}`);
+            console.error("MediaRecorder init failed:", err);
+            recorder = null; // Ensure recorder is null on failure
+            return;
+          }
+
+          recorder.ondataavailable = e => {
+            if (e.data && e.data.size > 0) {
+              chunks.push(e.data);
+              // console.log(`Recorded chunk size: ${e.data.size}`);
+            }
+          };
+
+          recorder.onstop = () => {
+            console.log("Recording stopped. Processing file.");
+            if (chunks.length === 0) {
               console.warn("No data chunks recorded.");
               recorder = null; // Clean up state
               startRenderLoop(); // Restart normal rendering loop
               return;
-          }
-          const blob = new Blob(chunks, { type: mimeType });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          const extension = mimeType.includes('webm') ? 'webm' : 'mp4';
-          link.download = `ascii-recording-${Date.now()}.${extension}`;
-          document.body.appendChild(link); // Required for Firefox
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-          chunks = []; // Clear chunks after saving
-          recorder = null; // Clear recorder instance after stopping
-          // Restart the render loop *after* recording is fully stopped and processed
-          startRenderLoop();
-        };
+            }
+            const blob = new Blob(chunks, { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const extension = mimeType.includes('webm') ? 'webm' : 'mp4';
+            link.download = `ascii-recording-${Date.now()}.${extension}`;
+            document.body.appendChild(link); // Required for Firefox
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            chunks = []; // Clear chunks after saving
+            recorder = null; // Clear recorder instance after stopping
+            // Restart the render loop *after* recording is fully stopped and processed
+            startRenderLoop();
+          };
 
-        recorder.onerror = (event) => {
+          recorder.onerror = (event) => {
             console.error("MediaRecorder error:", event.error);
             alert(`Recording error: ${event.error.name} - ${event.error.message}`);
             // Clean up state similar to onstop if needed
@@ -486,373 +548,374 @@
             setAllControls(true);
             recorder = null;
             startRenderLoop(); // Try to restart normal rendering
-        };
+          };
 
-        recorder.start(1000); // Record in 1-second chunks (or adjust as needed)
-        console.log("Recording started.");
-        recordBtn.textContent = 'Stop Recording';
-        setAllControls(false); // Disable controls during recording
-        // Restart render loop (will switch to setInterval if screen recording)
-        startRenderLoop();
-      }
-    });
+          recorder.start(1000); // Record in 1-second chunks (or adjust as needed)
+          console.log("Recording started.");
+          recordBtn.textContent = 'Stop Recording';
+          setAllControls(false); // Disable controls during recording
+          // Restart render loop (will switch to setInterval if screen recording)
+          startRenderLoop();
+        }
+      });
 
-    widthSlider.addEventListener('input', () => widthLabel.textContent = widthSlider.value);
-    contrastSlider.addEventListener('input', () => contrastLabel.textContent = parseFloat(contrastSlider.value).toFixed(2));
+      widthSlider.addEventListener('input', () => widthLabel.textContent = widthSlider.value);
+      contrastSlider.addEventListener('input', () => contrastLabel.textContent = parseFloat(contrastSlider.value).toFixed(2));
 
-    snapshotBtn.addEventListener('click', () => {
-      if (!video.srcObject || asciiEl.classList.contains('off')) {
-        alert("No active video to snapshot.");
-        return;
-      }
-      // Ensure the export canvas has the latest frame (render one last time if needed, though loop should handle it)
-      // renderAscii(); // Usually not needed if loop is running
+      snapshotBtn.addEventListener('click', () => {
+        if (!video.srcObject || asciiEl.classList.contains('off')) {
+          alert("No active video to snapshot.");
+          return;
+        }
+        // Ensure the export canvas has the latest frame (render one last time if needed, though loop should handle it)
+        // renderAscii(); // Usually not needed if loop is running
 
-      const link = document.createElement('a');
-      try {
-        link.href = exportCanvas.toDataURL('image/png');
-        link.download = `ascii-snapshot-${Date.now()}.png`;
-        document.body.appendChild(link); // Required for Firefox
-        link.click();
-        document.body.removeChild(link);
-      } catch (e) {
+        const link = document.createElement('a');
+        try {
+          link.href = exportCanvas.toDataURL('image/png');
+          link.download = `ascii-snapshot-${Date.now()}.png`;
+          document.body.appendChild(link); // Required for Firefox
+          link.click();
+          document.body.removeChild(link);
+        } catch (e) {
           console.error("Failed to create snapshot:", e);
           alert("Failed to create snapshot. Canvas might be tainted (if using external sources) or too large.");
-      }
-    });
+        }
+      });
 
-    previewToggleBtn.addEventListener('click', () => {
-      previewEnabled = !previewEnabled;
-      if (previewEnabled) {
-        asciiEl.classList.remove('hidden');
-        previewToggleBtn.textContent = 'Hide Preview';
-      } else {
-        asciiEl.classList.add('hidden');
-        previewToggleBtn.textContent = 'Show Preview';
-      }
-    });
+      previewToggleBtn.addEventListener('click', () => {
+        previewEnabled = !previewEnabled;
+        if (previewEnabled) {
+          asciiEl.classList.remove('hidden');
+          previewToggleBtn.textContent = 'Hide Preview';
+        } else {
+          asciiEl.classList.add('hidden');
+          previewToggleBtn.textContent = 'Show Preview';
+        }
+      });
 
-    invertToggle.addEventListener('change', () => {
-      invertEnabled = invertToggle.checked;
-    });
+      invertToggle.addEventListener('change', () => {
+        invertEnabled = invertToggle.checked;
+      });
 
-    charSetSelect.addEventListener('change', () => {
-      const selectedSet = charSetSelect.value;
-      if (selectedSet === 'custom') {
-        customCharLabel.classList.remove('hidden');
-        // Use existing custom input value or default to empty array if blank
-        asciiChars = Array.from(customCharInput.value || []);
-        if(asciiChars.length === 0) console.warn("Custom char set is empty.");
-      } else {
-        customCharLabel.classList.add('hidden');
-        asciiChars = asciiSets[selectedSet];
-      }
-       console.log("Using char set:", selectedSet, asciiChars);
-    });
+      charSetSelect.addEventListener('change', () => {
+        const selectedSet = charSetSelect.value;
+        if (selectedSet === 'custom') {
+          customCharLabel.classList.remove('hidden');
+          // Use existing custom input value or default to empty array if blank
+          asciiChars = Array.from(customCharInput.value || []);
+          if (asciiChars.length === 0) console.warn("Custom char set is empty.");
+        } else {
+          customCharLabel.classList.add('hidden');
+          asciiChars = asciiSets[selectedSet];
+        }
+        console.log("Using char set:", selectedSet, asciiChars);
+      });
 
-    customCharInput.addEventListener('input', () => {
-      if (charSetSelect.value === 'custom') {
-        asciiChars = Array.from(customCharInput.value);
-         if(asciiChars.length === 0) console.warn("Custom char set is empty.");
-         console.log("Custom chars updated:", asciiChars);
-      }
-    });
+      customCharInput.addEventListener('input', () => {
+        if (charSetSelect.value === 'custom') {
+          asciiChars = Array.from(customCharInput.value);
+          if (asciiChars.length === 0) console.warn("Custom char set is empty.");
+          console.log("Custom chars updated:", asciiChars);
+        }
+      });
 
-    async function switchSource(newSourceValue) {
+      async function switchSource(newSourceValue) {
         console.log(`Attempting to switch source to: ${newSourceValue}`);
         stopRenderLoop(); // Stop current processing
         let success = false;
 
         if (newSourceValue === 'camera') {
-            stopScreenCapture(); // Ensure screen capture is stopped
-            success = await startCamera();
+          stopScreenCapture(); // Ensure screen capture is stopped
+          success = await startCamera();
         } else { // screen
-            stopCamera(); // Ensure camera is stopped
-            screenStream = await startScreenCapture(); // Gets stream or null
-            if (screenStream) {
-                 video.srcObject = screenStream;
-                 await video.play();
-                 asciiEl.textContent = ''; // Clear status message
-                 asciiEl.classList.remove('off');
-                 success = true;
-                 // Loop will be started by loadedmetadata
-            } else {
-                // Screen capture failed or was cancelled, revert to camera
-                console.log("Screen capture failed, reverting to camera.");
-                sourceSelect.value = 'camera'; // Update dropdown
-                success = await startCamera(); // Try starting camera again
-            }
+          stopCamera(); // Ensure camera is stopped
+          screenStream = await startScreenCapture(); // Gets stream or null
+          if (screenStream) {
+            video.srcObject = screenStream;
+            await video.play();
+            asciiEl.textContent = ''; // Clear status message
+            asciiEl.classList.remove('off');
+            success = true;
+            // Loop will be started by loadedmetadata
+          } else {
+            // Screen capture failed or was cancelled, revert to camera
+            console.log("Screen capture failed, reverting to camera.");
+            sourceSelect.value = 'camera'; // Update dropdown
+            success = await startCamera(); // Try starting camera again
+          }
         }
 
         if (success) {
-            console.log(`Successfully switched source to: ${newSourceValue}`);
-            // Update controls based on whether a stream is active
-            setAllControls(true);
-            recordBtn.disabled = false;
+          console.log(`Successfully switched source to: ${newSourceValue}`);
+          // Update controls based on whether a stream is active
+          setAllControls(true);
+          recordBtn.disabled = false;
         } else {
-            console.error(`Failed to activate source: ${newSourceValue}`);
-            asciiEl.textContent = `Failed to switch to ${newSourceValue}.`;
-            asciiEl.classList.add('off');
-            setAllControls(false);
-            recordBtn.disabled = true;
+          console.error(`Failed to activate source: ${newSourceValue}`);
+          asciiEl.textContent = `Failed to switch to ${newSourceValue}.`;
+          asciiEl.classList.add('off');
+          setAllControls(false);
+          recordBtn.disabled = true;
         }
-    }
+      }
 
-    sourceSelect.addEventListener('change', async (e) => {
+      sourceSelect.addEventListener('change', async (e) => {
         await switchSource(e.target.value);
-    });
+      });
 
-    resetBtn.addEventListener('click', () => {
-      widthSlider.value    = initialWidth;
-      contrastSlider.value = initialContrast;
-      colorToggle.checked  = initialColor;
-      invertToggle.checked = initialInvert;
-      charSetSelect.value  = initialCharSet;
-      // Trigger change events to update labels and asciiChars
-      widthSlider.dispatchEvent(new Event('input'));
-      contrastSlider.dispatchEvent(new Event('input'));
-      invertToggle.dispatchEvent(new Event('change'));
-      charSetSelect.dispatchEvent(new Event('change'));
-    });
+      resetBtn.addEventListener('click', () => {
+        widthSlider.value = initialWidth;
+        contrastSlider.value = initialContrast;
+        colorToggle.checked = initialColor;
+        invertToggle.checked = initialInvert;
+        charSetSelect.value = initialCharSet;
+        // Trigger change events to update labels and asciiChars
+        widthSlider.dispatchEvent(new Event('input'));
+        contrastSlider.dispatchEvent(new Event('input'));
+        invertToggle.dispatchEvent(new Event('change'));
+        charSetSelect.dispatchEvent(new Event('change'));
+      });
 
-    video.addEventListener('loadedmetadata', () => {
-      console.log('Video metadata loaded.');
-      const vw = video.videoWidth;
-      const vh = video.videoHeight;
-      if (!vw || !vh) {
+      video.addEventListener('loadedmetadata', () => {
+        console.log('Video metadata loaded.');
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
+        if (!vw || !vh) {
           console.warn("Video dimensions not available yet in loadedmetadata.");
           return; // Wait for valid dimensions
-      }
-      console.log(`Video dimensions: ${vw}x${vh}`);
+        }
+        console.log(`Video dimensions: ${vw}x${vh}`);
 
-      // Adjust width slider based on video width
-      widthSlider.min = 80; // Keep a minimum practical width
-      widthSlider.max = Math.max(150, vw); // Allow up to native width, but ensure max > min
-      // Don't reset value here if already set, use configBeforeOff or initial
-      if (!widthSlider.value || parseInt(widthSlider.value) > widthSlider.max) {
+        // Adjust width slider based on video width
+        widthSlider.min = 80; // Keep a minimum practical width
+        widthSlider.max = Math.max(150, vw); // Allow up to native width, but ensure max > min
+        // Don't reset value here if already set, use configBeforeOff or initial
+        if (!widthSlider.value || parseInt(widthSlider.value) > widthSlider.max) {
           widthSlider.value = Math.min(initialWidth, widthSlider.max);
-      }
-       widthLabel.textContent = widthSlider.value; // Update label
+        }
+        widthLabel.textContent = widthSlider.value; // Update label
 
-      // Reset contrast label based on slider
-      contrastLabel.textContent = parseFloat(contrastSlider.value).toFixed(2);
+        // Reset contrast label based on slider
+        contrastLabel.textContent = parseFloat(contrastSlider.value).toFixed(2);
 
-      // Enable controls now that stream is ready
-      setAllControls(true);
-      recordBtn.disabled = false;
+        // Enable controls now that stream is ready
+        setAllControls(true);
+        recordBtn.disabled = false;
 
-      // Start the rendering loop
-      startRenderLoop();
-    });
+        // Start the rendering loop
+        startRenderLoop();
+      });
 
-    video.addEventListener('error', (e) => {
+      video.addEventListener('error', (e) => {
         console.error("Video element error:", e);
         asciiEl.textContent = `Video error: ${e.message || 'Unknown error'}`;
         asciiEl.classList.add('off');
         stopRenderLoop();
         setAllControls(false);
         recordBtn.disabled = true;
-    });
+      });
 
-    video.addEventListener('pause', () => {
+      video.addEventListener('pause', () => {
         console.log("Video paused.");
         // Optionally stop rendering loop if paused? Depends on desired behavior.
         // stopRenderLoop();
-    });
+      });
 
-     video.addEventListener('play', () => {
+      video.addEventListener('play', () => {
         console.log("Video playing.");
         // Ensure loop restarts if it was stopped on pause
-        if(!renderIntervalId && !renderRafId) {
-           startRenderLoop();
+        if (!renderIntervalId && !renderRafId) {
+          startRenderLoop();
         }
-    });
+      });
 
 
-    function renderAscii(timestamp) { // timestamp provided by rAF
-      if (asciiEl.classList.contains('off') || !video.srcObject || video.paused || video.ended || video.readyState < video.HAVE_CURRENT_DATA) {
+      function renderAscii(timestamp) { // timestamp provided by rAF
+        if (asciiEl.classList.contains('off') || !video.srcObject || video.paused || video.ended || video.readyState < video.HAVE_CURRENT_DATA) {
           // If rendering shouldn't happen, but the loop is running, just update FPS and return.
           // The loop stop logic is handled elsewhere (e.g., stopCamera, source change).
           updateFPS();
           return;
-      }
+        }
 
-      const vw = video.videoWidth, vh = video.videoHeight;
-      if (!vw || !vh) { // Double check dimensions
-        updateFPS();
-        return;
-      }
+        const vw = video.videoWidth, vh = video.videoHeight;
+        if (!vw || !vh) { // Double check dimensions
+          updateFPS();
+          return;
+        }
 
-      const baseW    = parseInt(widthSlider.value, 10);
-      const contrast = parseFloat(contrastSlider.value);
-      const useColor = colorToggle.checked;
-      const currentChars = asciiChars; // Use the currently selected character set
-      const isInverted = invertEnabled; // Use the current invert state
+        const baseW = parseInt(widthSlider.value, 10);
+        const contrast = parseFloat(contrastSlider.value);
+        const useColor = colorToggle.checked;
+        const currentChars = asciiChars; // Use the currently selected character set
+        const isInverted = invertEnabled; // Use the current invert state
 
-      if (currentChars.length === 0) {
+        if (currentChars.length === 0) {
           // Avoid division by zero or index errors if char set is empty
           updateFPS();
           return;
-      }
+        }
 
-      // Calculate output dimensions based on width slider and aspect ratio
-      const outW = baseW;
-      const outH = Math.max(1, Math.floor((vh / vw) * outW * charAspect)); // Ensure height is at least 1
+        // Calculate output dimensions based on width slider and aspect ratio
+        const outW = baseW;
+        const outH = Math.max(1, Math.floor((vh / vw) * outW * charAspect)); // Ensure height is at least 1
 
-      // --- Dynamic Font Size for Preview ---
-      if (previewEnabled && !asciiEl.classList.contains('hidden') && asciiEl.clientHeight > 0 && outH > 0) {
+        // --- Dynamic Font Size for Preview ---
+        if (previewEnabled && !asciiEl.classList.contains('hidden') && asciiEl.clientHeight > 0 && outH > 0) {
           const containerHeight = asciiEl.clientHeight - 20; // Subtract padding
           // Calculate font size based on container height and number of rows
           const dynamicFontSize = Math.max(2, Math.floor(containerHeight / outH)); // Min font size of 2px
           asciiEl.style.fontSize = `${dynamicFontSize}px`;
           // Adjust line height to match font size for better packing
           asciiEl.style.lineHeight = `${dynamicFontSize}px`;
-      } else if (!previewEnabled || asciiEl.classList.contains('hidden')) {
+        } else if (!previewEnabled || asciiEl.classList.contains('hidden')) {
           // Reset if hidden? Optional.
           // asciiEl.style.fontSize = '8px'; // Reset to base if hidden
-      }
+        }
 
 
-      // --- Drawing to intermediate canvas ---
-      canvas.width  = outW;
-      canvas.height = outH;
-      ctx.save();
-      // Flip camera horizontally, but not screen share
-      if (sourceSelect.value === 'camera') {
-        ctx.translate(outW, 0);
-        ctx.scale(-1, 1);
-      }
-      ctx.drawImage(video, 0, 0, outW, outH);
-      ctx.restore();
+        // --- Drawing to intermediate canvas ---
+        canvas.width = outW;
+        canvas.height = outH;
+        ctx.save();
+        // Flip camera horizontally, but not screen share
+        if (sourceSelect.value === 'camera') {
+          ctx.translate(outW, 0);
+          ctx.scale(-1, 1);
+        }
+        ctx.drawImage(video, 0, 0, outW, outH);
+        ctx.restore();
 
-      // --- Get Pixel Data ---
-      let imgData;
-      try {
-        imgData = ctx.getImageData(0, 0, outW, outH).data;
-      } catch (e) {
+        // --- Get Pixel Data ---
+        let imgData;
+        try {
+          imgData = ctx.getImageData(0, 0, outW, outH).data;
+        } catch (e) {
           console.error("Could not getImageData:", e);
           // This can happen due to canvas taint if unexpected source used
           updateFPS();
           return; // Cannot proceed without pixel data
-      }
+        }
 
-      // --- Prepare Export Canvas (Always 1080p for recording/snapshot) ---
-      const exportTargetWidth = 1920;
-      const exportTargetHeight = 1080;
-      // Adjust export canvas size ONLY if it differs, to avoid clearing context unnecessarily
-      if (exportCanvas.width !== exportTargetWidth) exportCanvas.width = exportTargetWidth;
-      if (exportCanvas.height !== exportTargetHeight) exportCanvas.height = exportTargetHeight;
+        // --- Prepare Export Canvas (Always 1080p for recording/snapshot) ---
+        const exportTargetWidth = 1920;
+        const exportTargetHeight = 1080;
+        // Adjust export canvas size ONLY if it differs, to avoid clearing context unnecessarily
+        if (exportCanvas.width !== exportTargetWidth) exportCanvas.width = exportTargetWidth;
+        if (exportCanvas.height !== exportTargetHeight) exportCanvas.height = exportTargetHeight;
 
-      ectx.fillStyle = isInverted ? '#fff' : '#000'; // Background based on inversion for export
-      ectx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-      ectx.font = `${baseFontSize}px monospace`; // Use fixed base font size for export
-      ectx.textBaseline = 'top';
+        ectx.fillStyle = isInverted ? '#fff' : '#000'; // Background based on inversion for export
+        ectx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+        ectx.font = `${baseFontSize}px monospace`; // Use fixed base font size for export
+        ectx.textBaseline = 'top';
 
-      // Calculate scaling needed to fit ASCII grid onto export canvas
-      const scaleX = exportCanvas.width / (outW * charWidth);
-      const scaleY = exportCanvas.height / (outH * charHeight);
-      // Use Math.min to maintain aspect ratio and fit within bounds (letterbox/pillarbox)
-      const scale = Math.min(scaleX, scaleY);
-      // Calculate centering offsets
-      const offsetX = (exportCanvas.width - (outW * charWidth * scale)) / 2;
-      const offsetY = (exportCanvas.height - (outH * charHeight * scale)) / 2;
+        // Calculate scaling needed to fit ASCII grid onto export canvas
+        const scaleX = exportCanvas.width / (outW * charWidth);
+        const scaleY = exportCanvas.height / (outH * charHeight);
+        // Use Math.min to maintain aspect ratio and fit within bounds (letterbox/pillarbox)
+        const scale = Math.min(scaleX, scaleY);
+        // Calculate centering offsets
+        const offsetX = (exportCanvas.width - (outW * charWidth * scale)) / 2;
+        const offsetY = (exportCanvas.height - (outH * charHeight * scale)) / 2;
 
-      ectx.save();
-      ectx.translate(offsetX, offsetY);
-      ectx.scale(scale, scale);
+        ectx.save();
+        ectx.translate(offsetX, offsetY);
+        ectx.scale(scale, scale);
 
 
-      // --- Generate ASCII and Draw to Preview/Export ---
-      let outputHtml = ''; // For color preview
-      let outputText = ''; // For monochrome preview
+        // --- Generate ASCII and Draw to Preview/Export ---
+        let outputHtml = ''; // For color preview
+        let outputText = ''; // For monochrome preview
 
-      const numChars = currentChars.length;
-      const charFactor = (numChars -1) / 255; // Precompute factor
+        const numChars = currentChars.length;
+        const charFactor = (numChars - 1) / 255; // Precompute factor
 
-      for (let y = 0; y < outH; y++) {
-        for (let x = 0; x < outW; x++) {
-          const i = (y * outW + x) * 4;
-          const r = imgData[i];
-          const g = imgData[i + 1];
-          const b = imgData[i + 2];
+        for (let y = 0; y < outH; y++) {
+          for (let x = 0; x < outW; x++) {
+            const i = (y * outW + x) * 4;
+            const r = imgData[i];
+            const g = imgData[i + 1];
+            const b = imgData[i + 2];
 
-          // Calculate Luminance (L)
-          let L = (0.299 * r + 0.587 * g + 0.114 * b); // 0-255
+            // Calculate Luminance (L)
+            let L = (0.299 * r + 0.587 * g + 0.114 * b); // 0-255
 
-          // Apply Contrast
-          L = ((L / 255.0 - 0.5) * contrast + 0.5) * 255.0;
-          L = Math.max(0, Math.min(255, L)); // Clamp L to 0-255
+            // Apply Contrast
+            L = ((L / 255.0 - 0.5) * contrast + 0.5) * 255.0;
+            L = Math.max(0, Math.min(255, L)); // Clamp L to 0-255
 
-          // Map Luminance to Character Index
-          let charIndex = Math.round(L * charFactor); // Round for better distribution
+            // Map Luminance to Character Index
+            let charIndex = Math.round(L * charFactor); // Round for better distribution
 
-          // Apply Inversion
-          if (!isInverted) { // If NOT inverted, dark pixels get later chars (often denser)
+            // Apply Inversion
+            if (!isInverted) { // If NOT inverted, dark pixels get later chars (often denser)
               charIndex = numChars - 1 - charIndex;
-          }
+            }
 
-          const ch = currentChars[charIndex];
+            const ch = currentChars[charIndex];
 
-          // Draw to Export Canvas
-          const drawX = x * charWidth;
-          const drawY = y * charHeight;
-          if (useColor) {
+            // Draw to Export Canvas
+            const drawX = x * charWidth;
+            const drawY = y * charHeight;
+            if (useColor) {
               const colorStyle = `rgb(${r},${g},${b})`;
               ectx.fillStyle = colorStyle;
               ectx.fillText(ch, drawX, drawY);
               // Build HTML for preview
               if (previewEnabled) {
-                  outputHtml += `<span style="color:${colorStyle}">${ch}</span>`;
+                outputHtml += `<span style="color:${colorStyle}">${ch}</span>`;
               }
-          } else {
+            } else {
               // Monochrome: Use inverted status for fill color
               ectx.fillStyle = isInverted ? '#000' : '#fff';
               ectx.fillText(ch, drawX, drawY);
               // Build Text for preview
               if (previewEnabled) {
-                  outputText += ch;
+                outputText += ch;
               }
-          }
-        } // end x loop
-        if (previewEnabled) {
+            }
+          } // end x loop
+          if (previewEnabled) {
             if (useColor) outputHtml += '\n'; // Use newline character for HTML line break with <pre>
             else outputText += '\n';
-        }
-      } // end y loop
-
-      ectx.restore(); // Restore transform state for export canvas
-
-      // --- Update Preview Element ---
-      if (previewEnabled && !asciiEl.classList.contains('hidden')) {
-          if (useColor) {
-              // Using innerHTML is less performant but necessary for inline styles
-              asciiEl.innerHTML = outputHtml;
-          } else {
-              // textContent is much faster for monochrome
-              asciiEl.textContent = outputText;
           }
+        } // end y loop
+
+        ectx.restore(); // Restore transform state for export canvas
+
+        // --- Update Preview Element ---
+        if (previewEnabled && !asciiEl.classList.contains('hidden')) {
+          if (useColor) {
+            // Using innerHTML is less performant but necessary for inline styles
+            asciiEl.innerHTML = outputHtml;
+          } else {
+            // textContent is much faster for monochrome
+            asciiEl.textContent = outputText;
+          }
+        }
+
+        updateFPS();
+
+        // *** DO NOT add requestAnimationFrame(renderAscii) here ***
+        // The loop is managed by startRenderLoop's mechanism
       }
 
-      updateFPS();
+      // --- Initial Setup ---
+      // Set initial control values based on defaults
+      widthSlider.value = initialWidth;
+      widthLabel.textContent = initialWidth;
+      contrastSlider.value = initialContrast;
+      contrastLabel.textContent = initialContrast.toFixed(2);
+      colorToggle.checked = initialColor;
+      invertToggle.checked = initialInvert;
+      charSetSelect.value = initialCharSet;
+      charSetSelect.dispatchEvent(new Event('change')); // Update asciiChars based on default select
+      // Start with camera by default
+      await switchSource('camera'); // Use the switch function for consistency
 
-      // *** DO NOT add requestAnimationFrame(renderAscii) here ***
-      // The loop is managed by startRenderLoop's mechanism
-    }
-
-    // --- Initial Setup ---
-    // Set initial control values based on defaults
-    widthSlider.value = initialWidth;
-    widthLabel.textContent = initialWidth;
-    contrastSlider.value = initialContrast;
-    contrastLabel.textContent = initialContrast.toFixed(2);
-    colorToggle.checked = initialColor;
-    invertToggle.checked = initialInvert;
-    charSetSelect.value = initialCharSet;
-    charSetSelect.dispatchEvent(new Event('change')); // Update asciiChars based on default select
-    // Start with camera by default
-    await switchSource('camera'); // Use the switch function for consistency
-
-  })();
+    })();
   </script>
 </body>
+
 </html>
