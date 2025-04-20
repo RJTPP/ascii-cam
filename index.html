@@ -212,8 +212,10 @@
     </select>
 
     <!-- Row 4: Custom Chars (Conditional) -->
-    <label for="customCharInput" id="customCharLabel" class="hidden custom-char-label">Custom:</label>
-    <input type="text" id="customCharInput" class="hidden custom-char-input" placeholder="e.g. .-+*#%">
+    <div id="customCharWrapper" class="hidden" style="grid-column: 1 / -1; display: flex; gap: 0.5rem; align-items: center;">
+      <label for="customCharInput" class="custom-char-label">Custom Chars:</label>
+      <input type="text" id="customCharInput" class="custom-char-input" placeholder="e.g. .-+*#%">
+    </div>
 
     <!-- Row 5: Buttons & FPS -->
     <button id="snapshotBtn">Save PNG</button>
@@ -254,7 +256,7 @@
       const invertToggle = document.getElementById('invertToggle');
       const sourceSelect = document.getElementById('sourceSelect');
       const charSetSelect = document.getElementById('charSetSelect');
-      const customCharLabel = document.getElementById('customCharLabel');
+      const customCharWrapper = document.getElementById('customCharWrapper');
       const customCharInput = document.getElementById('customCharInput');
 
       let previewEnabled = true;
@@ -601,12 +603,12 @@
       charSetSelect.addEventListener('change', () => {
         const selectedSet = charSetSelect.value;
         if (selectedSet === 'custom') {
-          customCharLabel.classList.remove('hidden');
+          customCharWrapper.classList.remove('hidden');
           // Use existing custom input value or default to empty array if blank
           asciiChars = Array.from(customCharInput.value || []);
           if (asciiChars.length === 0) console.warn("Custom char set is empty.");
         } else {
-          customCharLabel.classList.add('hidden');
+          customCharWrapper.classList.add('hidden');
           asciiChars = asciiSets[selectedSet];
         }
         console.log("Using char set:", selectedSet, asciiChars);
