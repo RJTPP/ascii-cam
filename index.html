@@ -86,14 +86,15 @@
     }
     .ascii {
       position: relative;
-      flex: 1;
       background: #000;
       color: #fff;
       padding: 10px;
       overflow: auto;
       white-space: pre;
       line-height: 1em;
-      font-size: 8px;
+      width: 100%;
+      height: calc(100vh - 100px); /* adjust 100px if your controls bar is a different height */
+      box-sizing: border-box;
     }
     .ascii.off {
       display: flex;
@@ -338,6 +339,10 @@
       const contrast = parseFloat(contrastSlider.value);
       const outW     = baseW;
       const outH     = Math.floor((vh / vw) * outW * charAspect);
+      // Adjust font size so the ASCII grid fills the preview container height
+      const containerHeight = asciiEl.clientHeight;
+      const dynamicFontSize = Math.max(4, Math.floor(containerHeight / outH));
+      asciiEl.style.fontSize = `${dynamicFontSize}px`;
       canvas.width  = outW;
       canvas.height = outH;
       exportCanvas.width  = Math.ceil(outW * charWidth);
