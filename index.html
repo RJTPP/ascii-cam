@@ -127,6 +127,16 @@
       <input type="checkbox" id="colorToggle">
       Color
     </label>
+    <label for="charSetSelect">Chars:</label>
+    <select id="charSetSelect">
+      <option value="simple">Simple</option>
+      <option value="standard">Standard</option>
+      <option value="simpleInvert">Simple (Invert)</option>
+      <option value="standardInvert">Standard (Invert)</option>
+      <option value="pixel">Pixel</option>
+      <option value="ternary">Ternary</option>
+      <option value="blackAndWhite">Black and White</option>
+    </select>
     <label for="sourceSelect">Source:</label>
     <select id="sourceSelect">
       <option value="camera">Camera</option>
@@ -169,7 +179,16 @@
 
     let screenStream = null;
 
-    const asciiChars = ['@','#','*','=',':','.',' '];
+    const asciiSets = {
+      simple: ['@','%','#','*','+','=','-',';',':',',','.',' '],
+      simpleInvert: ['@','%','#','*','+','=','-',';',':',',','.',' '].reverse(),
+      standard: Array.from(" .-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@").reverse(),
+      standardInvert: Array.from(" .-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@"),
+      pixel: ['█','▓','▒','░'],
+      ternary: ['.','.',',', ',',' '],
+      blackAndWhite: ['.','.','.',' ']
+    };
+    let asciiChars = asciiSets.simple;
     const charAspect = 0.5;
     const fontSize   = 8;
     ectx.font = `${fontSize}px monospace`;
@@ -286,6 +305,10 @@
     });
 
     const sourceSelect = document.getElementById('sourceSelect');
+    const charSetSelect = document.getElementById('charSetSelect');
+    charSetSelect.addEventListener('change', () => {
+      asciiChars = asciiSets[charSetSelect.value];
+    });
     startCamera();
     sourceSelect.addEventListener('change', async (e) => {
       if (e.target.value === 'camera') {
