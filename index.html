@@ -81,6 +81,9 @@
       border-radius: 4px;
       cursor: pointer;
     }
+    .hidden {
+      display: none !important;
+    }
     .ascii {
       position: relative;
       flex: 1;
@@ -132,6 +135,7 @@
     <button id="snapshotBtn">Save PNG</button>
     <button id="recordBtn">Start Recording</button>
     <button id="resetBtn">Reset Config</button>
+    <button id="previewToggleBtn">Hide Preview</button>
     <span id="fpsDisplay">-- FPS</span>
   </div>
 
@@ -159,6 +163,8 @@
     const recordBtn      = document.getElementById('recordBtn');
     const resetBtn       = document.getElementById('resetBtn');
     const fpsDisplay     = document.getElementById('fpsDisplay');
+    const previewToggleBtn = document.getElementById('previewToggleBtn');
+    let previewEnabled = true;
 
     let screenStream = null;
 
@@ -234,6 +240,8 @@
         recorder.stop();
         recordBtn.textContent = 'Start Recording';
         setAllControls(true);
+        sourceSelect.disabled = false;
+        previewToggleBtn.disabled = false;
       } else {
         const recStream = exportCanvas.captureStream(30);
         chunks = [];
@@ -250,6 +258,8 @@
         recorder.start();
         recordBtn.textContent = 'Stop Recording';
         setAllControls(false);
+        sourceSelect.disabled = true;
+        previewToggleBtn.disabled = true;
       }
     });
 
@@ -261,6 +271,17 @@
       link.href = exportCanvas.toDataURL('image/png');
       link.download = `ascii-${Date.now()}.png`;
       link.click();
+    });
+
+    previewToggleBtn.addEventListener('click', () => {
+      previewEnabled = !previewEnabled;
+      if (previewEnabled) {
+        asciiEl.classList.remove('hidden');
+        previewToggleBtn.textContent = 'Hide Preview';
+      } else {
+        asciiEl.classList.add('hidden');
+        previewToggleBtn.textContent = 'Show Preview';
+      }
     });
 
     const sourceSelect = document.getElementById('sourceSelect');
