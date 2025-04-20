@@ -270,10 +270,24 @@
         sourceSelect.disabled = false;
         previewToggleBtn.disabled = false;
       } else {
-        const recStream = exportCanvas.captureStream(30);
+        let recStream;
+        if (exportCanvas.captureStream) {
+          recStream = exportCanvas.captureStream(30);
+        } else if (exportCanvas.mozCaptureStream) {
+          recStream = exportCanvas.mozCaptureStream(30);
+        } else {
+          alert('Recording is not supported in this browser. Please try Chrome or Firefox.');
+          return;
+        }
         chunks = [];
         try { recorder = new MediaRecorder(recStream, { mimeType: 'video/mp4' }); }
-        catch { recorder = new MediaRecorder(recStream, { mimeType: 'video/webm' }); }
+        catch {
+          try { recorder = new MediaRecorder(recStream, { mimeType: 'video/webm' }); }
+          catch (err) {
+            alert('MediaRecorder initialization failed: ' + err);
+            return;
+          }
+        }
         recorder.ondataavailable = e => e.data.size && chunks.push(e.data);
         recorder.onstop = () => {
           const blob = new Blob(chunks, { type: recorder.mimeType });
@@ -334,7 +348,29 @@
         asciiChars = Array.from(customCharInput.value);
       }
     });
-
+    
+    // MDN-style screen capture with track end handling
+    async function startScreenCapture() {
+      try {
+        const captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        // Revert to camera when user stops sharing
+        const [track] = captureStream.getVideoTracks();
+        track.addEventListener('ended', async () => {
+          sourceSelect.value = 'camera';
+          if (screenStream) {
+            screenStream.getTracks().forEach(t => t.stop());
+            screenStream = null;
+          }
+          stopCamera();
+          await startCamera();
+        });
+        return captureStream;
+      } catch (err) {
+        console.error('Screen capture failed:', err);
+        return null;
+      }
+    }
+    
     startCamera();
     sourceSelect.addEventListener('change', async (e) => {
       if (e.target.value === 'camera') {
@@ -352,9 +388,11 @@
         asciiEl.classList.remove('off');
         // start screen capture
         try {
-          screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-          video.srcObject = screenStream;
-          requestAnimationFrame(renderAscii);
+          screenStream = await startScreenCapture();
+          if (screenStream) {
+            video.srcObject = screenStream;
+            requestAnimationFrame(renderAscii);
+          }
         } catch (err) {
           console.error('Screen capture failed:', err);
         }
