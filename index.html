@@ -394,8 +394,13 @@
       asciiEl.style.fontSize = `${dynamicFontSize}px`;
       canvas.width  = outW;
       canvas.height = outH;
-      exportCanvas.width  = Math.ceil(outW * charWidth);
-      exportCanvas.height = Math.ceil(outH * charHeight);
+      exportCanvas.width  = 1920;
+      exportCanvas.height = 1080;
+      // Scale ASCII drawing to full 1080p
+      ectx.save();
+      const scaleX = exportCanvas.width / (outW * charWidth);
+      const scaleY = exportCanvas.height / (outH * charHeight);
+      ectx.scale(scaleX, scaleY);
       if (sourceSelect.value === 'camera') {
         ctx.save();
         ctx.scale(-1, 1);
@@ -443,6 +448,7 @@
         }
         asciiEl.textContent = txt;
       }
+      ectx.restore();
       updateFPS();
       requestAnimationFrame(renderAscii);
     }
